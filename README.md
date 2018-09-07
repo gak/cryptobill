@@ -5,7 +5,7 @@ Retrieves quotes to compare multiple crypto bill services.
 ## Example
 
 ```
-$ cryptobill quote aud 1000
+$ cryptobill quote aud 100
 
 Living Room of Satoshi LTC 1.3090919696934211
 Living Room of Satoshi XRP 260.0032620217256
