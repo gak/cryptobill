@@ -6,6 +6,18 @@ type CryptoBill struct {
 	HttpClient *http.Client
 }
 
+type Service interface {
+	Name() string
+	Website() string
+	Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error)
+}
+
+var Services = []Service{
+	NewLivingRoom(),
+	NewPaidByCoins(),
+	NewBit2Bill(),
+}
+
 type Amount float64
 
 type Pair struct {

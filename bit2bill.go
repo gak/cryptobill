@@ -36,7 +36,7 @@ func (bb *Bit2Bill) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Quote
 	var results []QuoteResult
 	for k, v := range rates {
 		// We're expecting the keys to look like "BTCRate", etc.
-		to, err := NewCurrencyFromString(strings.Replace(k, "Rate", "", 1))
+		to, err := NewCurrencyFromString(strings.TrimSuffix(k, "Rate"))
 		if err != nil {
 			return nil, err
 		}
