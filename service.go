@@ -9,4 +9,5 @@ type Service interface {
 var Services = []Service{
 	NewLivingRoom(),
 	NewPaidByCoins(),
+	NewBit2Bill(),
 }
