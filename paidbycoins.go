@@ -11,19 +11,19 @@ import (
 type PaidByCoins struct{}
 
 type CurrenciesResponse struct {
-	Message string `json:"Message"`
+	Message string
 	Items   struct {
-		Currencies []CurrencyDetail `json:"CurrencyDetails"`
-	} `json:"Items"`
+		Currencies []CurrencyDetail
+	}
 }
 
 type CurrencyDetail struct {
-	ShortForm string `json:"ShortForm"`
-	Type      string `json:"Type"`
+	ShortForm string
+	Type      string
 }
 
 type OrderBookResponse struct {
-	HighestBuy float64 `json:"HighestBuy"`
+	HighestBuy float64
 }
 
 func NewPaidByCoins() Service {
