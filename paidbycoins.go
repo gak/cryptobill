@@ -13,13 +13,21 @@ type PaidByCoins struct{}
 type CurrenciesResponse struct {
 	Message string
 	Items   struct {
-		Currencies []CurrencyDetail
+		CurrencyDetails []CurrencyDetail
 	}
 }
 
 type CurrencyDetail struct {
+	// "BTC", etc.
 	ShortForm string
-	Type      string
+
+	// "BitcoinCash", etc. Used for calling other endpoints.
+	Type string
+
+	// An added charge on top of the order book cost.
+	TransactionCharge float64
+	BrokeragePercent  float64
+	GSTPercent        float64
 }
 
 type OrderBookResponse struct {
@@ -38,15 +46,15 @@ func (*PaidByCoins) Website() string {
 	panic("implement me")
 }
 
-func (pbp *PaidByCoins) Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error) {
-	currencies, err := pbp.getCurrencies(cb)
+func (pbc *PaidByCoins) Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error) {
+	currencies, err := pbc.getCurrencies(cb)
 	if err != nil {
 		return nil, errors.Wrap(err, "get currencies")
 	}
 
 	var results []QuoteResult
-	for _, currency := range currencies.Items.Currencies {
-		book, err := pbp.orderBook(cb, currency.Type)
+	for _, currency := range currencies.Items.CurrencyDetails {
+		book, err := pbc.orderBook(cb, currency.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -57,11 +65,15 @@ func (pbp *PaidByCoins) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Q
 			continue
 		}
 
-		fmt.Println(currency, book)
+		// From the website sources:
+		// t.exchangeHighestPrice.HighestBuy - t.exchangeHighestPrice.HighestBuy / 100 * t.txnCharge
+		high := Amount(book.HighestBuy)
+		rate := high - high/100.0*Amount(currency.TransactionCharge)
+		finalAmount := amount / rate
 		result := QuoteResult{
-			Service:    pbp,
+			Service:    pbc,
 			Pair:       Pair{from, to},
-			Conversion: Conversion{amount, amount / Amount(book.HighestBuy)},
+			Conversion: Conversion{amount, finalAmount},
 		}
 		results = append(results, result)
 	}
@@ -77,7 +89,6 @@ func (pbc *PaidByCoins) getCurrencies(cb *CryptoBill) (*CurrenciesResponse, erro
 	}
 
 	currencies := CurrenciesResponse{}
-
 	err = json.NewDecoder(resp.Body).Decode(&currencies)
 	if err != nil {
 		return nil, errors.Wrap(err, "decoding json from "+url)
@@ -86,8 +97,6 @@ func (pbc *PaidByCoins) getCurrencies(cb *CryptoBill) (*CurrenciesResponse, erro
 	if currencies.Message != "" {
 		return nil, errors.New(currencies.Message)
 	}
-
-	fmt.Println(currencies)
 
 	return &currencies, nil
 }

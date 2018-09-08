@@ -15,6 +15,16 @@ var Currencies = map[string]Currency{
 	"BCH":       Currency("BCH"),
 	"LTC":       Currency("LTC"),
 	"XRP":       Currency("XRP"),
+	"STEEM":     Currency("STEEM"),
+	"PIVX":      Currency("PIVX"),
+	"ZEC":       Currency("ZEC"),
+	"ETC":       Currency("ETC"),
+	"XMR":       Currency("XMR"),
+	"DASH":      Currency("DASH"),
+	"DOGE":      Currency("DOGE"),
+	"BTX":       Currency("BTX"),
+	"XEM":       Currency("XEM"),
+	"SBD":       Currency("SBD"),
 	"LIGHTNING": Currency("LIGHTNING"),
 }
 
