@@ -47,11 +47,6 @@ provider:
 #    variable1: value1
 
 package:
-# exclude:
-#   - ./**
-# include:
-#   - ./bin/**
-  
   # This is generated with cmd/serverless_packager
   artifact: bin/cryptobill.zip
 
@@ -59,16 +54,16 @@ functions:
   hello:
     handler: bin/hello
     events:
-      - http:
-          path: hello
-          method: get
-    
+    - http:
+        path: hello
+        method: get
+
   world:
     handler: bin/world
     events:
-      - http:
-          path: world
-          method: get
+    - http:
+        path: world
+        method: get
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
