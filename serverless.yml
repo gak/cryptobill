@@ -47,10 +47,13 @@ provider:
 #    variable1: value1
 
 package:
- exclude:
-   - ./**
- include:
-   - ./bin/**
+# exclude:
+#   - ./**
+# include:
+#   - ./bin/**
+  
+  # This is generated with cmd/serverless_packager
+  artifact: bin/cryptobill.zip
 
 functions:
   hello:
@@ -59,6 +62,7 @@ functions:
       - http:
           path: hello
           method: get
+    
   world:
     handler: bin/world
     events:

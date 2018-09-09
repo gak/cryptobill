@@ -1,5 +1,7 @@
 github.com/alecthomas/kong v0.0.0-20180814110558-ebe508cf4619 h1:GlHNONwsWigaucW8wtclps+GH/i4K5QE8cRTJIfWOIk=
 github.com/alecthomas/kong v0.0.0-20180814110558-ebe508cf4619/go.mod h1:bSvZejG++spllMcepZA1uFFZgMfqRS8nSkGm2SXQiPU=
+github.com/aws/aws-lambda-go v1.6.0 h1:T+u/g79zPKw1oJM7xYhvpq7i4Sjc0iVsXZUaqRVVSOg=
+github.com/aws/aws-lambda-go v1.6.0/go.mod h1:zUsUQhAUjYzR8AuduJPCfhBuKWUaDbQiPOG+ouzmE1A=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=

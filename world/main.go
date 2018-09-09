@@ -1,12 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
+"bytes"
+"context"
+"encoding/json"
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
+"github.com/aws/aws-lambda-go/events"
+"github.com/aws/aws-lambda-go/lambda"
 )
 
 // Response is of type APIGatewayProxyResponse since we're leveraging the
