@@ -8,6 +8,7 @@ type CryptoBill struct {
 
 type Service interface {
 	Name() string
+	ShortName() string
 	Website() string
 	Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error)
 }

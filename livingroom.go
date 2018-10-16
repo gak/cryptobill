@@ -21,6 +21,10 @@ func (lros *LivingRoom) Name() string {
 	return "Living Room of Satoshi"
 }
 
+func (lros *LivingRoom) ShortName() string {
+	return "LROS"
+}
+
 func (lros *LivingRoom) Website() string {
 	return ""
 }

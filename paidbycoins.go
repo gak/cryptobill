@@ -42,6 +42,10 @@ func (*PaidByCoins) Name() string {
 	return "Paid By Coins"
 }
 
+func (*PaidByCoins) ShortName() string {
+	return "PBC"
+}
+
 func (*PaidByCoins) Website() string {
 	panic("implement me")
 }

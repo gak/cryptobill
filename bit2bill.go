@@ -16,6 +16,10 @@ func (*Bit2Bill) Name() string {
 	return "Bit2Bill"
 }
 
+func (*Bit2Bill) ShortName() string {
+	return "B2B"
+}
+
 func (*Bit2Bill) Website() string {
 	panic("implement me")
 }

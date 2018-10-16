@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/gak/cryptobill"
+	"os"
+	"text/tabwriter"
 
 	"github.com/alecthomas/kong"
 )
@@ -40,7 +42,9 @@ func (m *Main) quote(q *Quote) {
 		panic(err)
 	}
 
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight|tabwriter.Debug)
 	for _, quote := range result {
-		fmt.Println(quote.Service.Name(), quote.Pair.To, quote.Conversion.To)
+		fmt.Fprintf(w, "%v\t%v\t%5.5f\t\n", quote.Service.ShortName(), quote.Pair.To, quote.Conversion.To)
 	}
+	w.Flush()
 }
