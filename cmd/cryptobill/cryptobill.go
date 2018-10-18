@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gak/cryptobill"
 	"os"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/alecthomas/kong"
@@ -44,6 +45,8 @@ func (m *Main) quote(q *Quote) {
 		panic(err)
 	}
 
+	sortByCryptoAndValue(result)
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight|tabwriter.Debug)
 	for _, quote := range result {
 
@@ -56,7 +59,27 @@ func (m *Main) quote(q *Quote) {
 	w.Flush()
 }
 
+func sortByCryptoAndValue(result []cryptobill.QuoteResult) {
+	sort.Slice(result, func(i, j int) bool {
+		ci := result[i].Pair.Crypto
+		cj := result[j].Pair.Crypto
+
+		ai := result[i].Conversion.Crypto
+		aj := result[j].Conversion.Crypto
+
+		if ci == cj {
+			return ai < aj
+		} else {
+			return ci < cj
+		}
+	})
+}
+
 func (m *Main) showQuote(quote cryptobill.QuoteResult) bool {
+	if len(m.cli.Quote.Filter) == 0 {
+		return true
+	}
+
 	showQuote := false
 	for _, filterStr := range m.cli.Quote.Filter {
 		filter, err := cryptobill.NewCurrencyFromString(filterStr)
