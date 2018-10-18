@@ -29,7 +29,7 @@ func (lros *LivingRoom) Website() string {
 	return ""
 }
 
-func (lros *LivingRoom) Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error) {
+func (lros *LivingRoom) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]QuoteResult, error) {
 	req, err := http.NewRequest("GET", "https://www.livingroomofsatoshi.com/api/v1/current_rates", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "request builder")
@@ -55,13 +55,13 @@ func (lros *LivingRoom) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Q
 	var results []QuoteResult
 	for pair, quoted := range decoded {
 		bits := strings.Split(pair, "_")
-		from, err := NewCurrencyFromString(bits[0])
+		fiat, err := NewCurrencyFromString(bits[0])
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
 
-		to, err := NewCurrencyFromString(bits[1])
+		crypto, err := NewCurrencyFromString(bits[1])
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
@@ -69,7 +69,7 @@ func (lros *LivingRoom) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Q
 
 		qr := QuoteResult{
 			lros,
-			Pair{from, to},
+			Pair{fiat, crypto},
 			Conversion{amount, amount / Amount(quoted)},
 		}
 		results = append(results, qr)

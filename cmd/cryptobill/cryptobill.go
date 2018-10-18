@@ -10,9 +10,9 @@ import (
 )
 
 type Quote struct {
-	From   cryptobill.Currency `arg`
+	Fiat   cryptobill.Currency `arg`
 	Amount cryptobill.Amount   `arg`
-	To     []string            `help:"Filter by coin, e.g. BTC,ETH"`
+	Filter []string            `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
 }
 
 type CLI struct {
@@ -31,7 +31,7 @@ func main() {
 
 	ctx := kong.Parse(&m.cli)
 	switch ctx.Command() {
-	case "quote <from> <amount>":
+	case "quote <fiat> <amount>":
 		m.quote(&m.cli.Quote)
 	default:
 		panic(ctx.Command())
@@ -39,7 +39,7 @@ func main() {
 }
 
 func (m *Main) quote(q *Quote) {
-	result, err := m.cb.Quote(q.From, q.Amount)
+	result, err := m.cb.Quote(q.Fiat, q.Amount)
 	if err != nil {
 		panic(err)
 	}
@@ -51,19 +51,19 @@ func (m *Main) quote(q *Quote) {
 			continue
 		}
 
-		fmt.Fprintf(w, "%v\t%v\t%5.5f\t\n", quote.Service.ShortName(), quote.Pair.To, quote.Conversion.To)
+		fmt.Fprintf(w, "%v\t%v\t%5.5f\t\n", quote.Service.ShortName(), quote.Pair.Crypto, quote.Conversion.Crypto)
 	}
 	w.Flush()
 }
 
 func (m *Main) showQuote(quote cryptobill.QuoteResult) bool {
 	showQuote := false
-	for _, to := range m.cli.Quote.To {
-		toCur, err := cryptobill.NewCurrencyFromString(to)
+	for _, filterStr := range m.cli.Quote.Filter {
+		filter, err := cryptobill.NewCurrencyFromString(filterStr)
 		if err != nil {
 			panic(err)
 		}
-		if toCur == quote.Pair.To {
+		if filter == quote.Pair.Crypto {
 			showQuote = true
 		}
 	}

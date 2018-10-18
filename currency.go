@@ -26,6 +26,7 @@ var Currencies = map[string]Currency{
 	"XEM":       Currency("XEM"),
 	"SBD":       Currency("SBD"),
 	"LIGHTNING": Currency("LIGHTNING"),
+	"DCR":       Currency("DCR"),
 }
 
 func NewCurrencyFromString(s string) (Currency, error) {

@@ -50,7 +50,7 @@ func (*PaidByCoins) Website() string {
 	panic("implement me")
 }
 
-func (pbc *PaidByCoins) Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error) {
+func (pbc *PaidByCoins) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]QuoteResult, error) {
 	currencies, err := pbc.getCurrencies(cb)
 	if err != nil {
 		return nil, errors.Wrap(err, "get currencies")
@@ -63,7 +63,7 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Q
 			return nil, err
 		}
 
-		to, err := NewCurrencyFromString(currency.ShortForm)
+		crypto, err := NewCurrencyFromString(currency.ShortForm)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
@@ -76,7 +76,7 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Q
 		finalAmount := amount / rate
 		result := QuoteResult{
 			Service:    pbc,
-			Pair:       Pair{from, to},
+			Pair:       Pair{fiat, crypto},
 			Conversion: Conversion{amount, finalAmount},
 		}
 		results = append(results, result)

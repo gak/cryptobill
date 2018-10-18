@@ -10,7 +10,7 @@ type Service interface {
 	Name() string
 	ShortName() string
 	Website() string
-	Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error)
+	Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]QuoteResult, error)
 }
 
 var Services = []Service{
@@ -22,11 +22,11 @@ var Services = []Service{
 type Amount float64
 
 type Pair struct {
-	From, To Currency
+	Fiat, Crypto Currency
 }
 
 type Conversion struct {
-	From, To Amount
+	Fiat, Crypto Amount
 }
 
 type QuoteResult struct {

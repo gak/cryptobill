@@ -24,7 +24,7 @@ func (*Bit2Bill) Website() string {
 	panic("implement me")
 }
 
-func (bb *Bit2Bill) Quote(cb *CryptoBill, from Currency, amount Amount) ([]QuoteResult, error) {
+func (bb *Bit2Bill) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]QuoteResult, error) {
 	url := "https://www.bit2bill.com.au/api/rate"
 	resp, err := cb.HttpClient.Get(url)
 	if err != nil {
@@ -40,14 +40,14 @@ func (bb *Bit2Bill) Quote(cb *CryptoBill, from Currency, amount Amount) ([]Quote
 	var results []QuoteResult
 	for k, v := range rates {
 		// We're expecting the keys to look like "BTCRate", etc.
-		to, err := NewCurrencyFromString(strings.TrimSuffix(k, "Rate"))
+		crypto, err := NewCurrencyFromString(strings.TrimSuffix(k, "Rate"))
 		if err != nil {
 			return nil, err
 		}
 
 		result := QuoteResult{
 			Service:    bb,
-			Pair:       Pair{from, to},
+			Pair:       Pair{fiat, crypto},
 			Conversion: Conversion{amount, amount / Amount(v)},
 		}
 		results = append(results, result)
