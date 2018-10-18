@@ -2,6 +2,8 @@
 
 Retrieves quotes to compare multiple crypto bill services.
 
+Feel free to send in pull requests for others.
+
 ## Example
 
 ```
