@@ -15,9 +15,11 @@ import (
 )
 
 type Quote struct {
-	Fiat   cryptobill.Currency `arg`
-	Amount cryptobill.Amount   `arg`
-	Filter []string            `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
+	Fiat          cryptobill.Currency `arg`
+	Amount        cryptobill.Amount   `arg`
+	Filter        []string            `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
+	Services      []string            `help:"Filter by service, e.g. BPC,LROS"`
+	NoConvertBack bool
 }
 
 type CLI struct {
@@ -49,13 +51,19 @@ func (m *Main) quote(q *Quote) {
 		panic(err)
 	}
 
-	lookup, err := m.fetchExchange(result)
-	if err != nil {
-		panic(err)
-	}
+	lookup := map[cryptobill.Currency]cryptobill.Amount{}
 
-	//sortByCryptoAndValue(result)
-	sortByFiatValue(result, lookup)
+	if q.NoConvertBack {
+		sortByCryptoAndValue(result)
+
+	} else {
+		lookup, err = m.fetchExchange(result)
+		if err != nil {
+			panic(err)
+		}
+
+		sortByFiatValue(result, lookup)
+	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight|tabwriter.Debug)
 	for _, quote := range result {
@@ -65,13 +73,21 @@ func (m *Main) quote(q *Quote) {
 		}
 
 		fmt.Fprintf(
-			w, "%v\t%v\t%5.5f\t%5.5f\t%2.3f%%\t\n",
+			w, "%v\t%v\t%5.5f\t",
 			quote.Service.ShortName(),
 			quote.Pair.Crypto,
 			quote.Conversion.Crypto,
-			lookup[quote.Pair.Crypto]*quote.Conversion.Crypto,
-			lookup[quote.Pair.Crypto]*quote.Conversion.Crypto/quote.Conversion.Fiat*100-100,
 		)
+
+		if !q.NoConvertBack {
+			fmt.Fprintf(
+				w, "%5.5f\t%2.3f%%\t",
+				lookup[quote.Pair.Crypto]*quote.Conversion.Crypto,
+				lookup[quote.Pair.Crypto]*quote.Conversion.Crypto/quote.Conversion.Fiat*100-100,
+			)
+		}
+
+		fmt.Fprintf(w, "\n")
 	}
 	w.Flush()
 }
@@ -115,14 +131,12 @@ func (m *Main) showQuote(quote cryptobill.QuoteResult) bool {
 			showQuote = true
 		}
 	}
+
 	return showQuote
 }
 
 func (m *Main) fetchExchange(result []cryptobill.QuoteResult) (map[cryptobill.Currency]cryptobill.Amount, error) {
 	lookup := map[cryptobill.Currency]cryptobill.Amount{}
-
-	//client := bitcoinaverage.NewClient("", "")
-	//priceDataService := bitcoinaverage.NewPriceDataService(client)
 
 	for _, quote := range result {
 		if !m.showQuote(quote) {
@@ -167,7 +181,6 @@ func bitcoinAverage(cb *cryptobill.CryptoBill, symbol string) (float64, error) {
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Print(string(body))
 	if err != nil {
 		return 0, errors.Wrap(err, "reading body")
 	}
@@ -175,7 +188,7 @@ func bitcoinAverage(cb *cryptobill.CryptoBill, symbol string) (float64, error) {
 	decoded := BitcoinAverageResponse{}
 	err = json.Unmarshal(body, &decoded)
 	if err != nil {
-		return 0, errors.Wrap(err, "decoding body to json")
+		return 0, errors.Wrap(err, "decoding body to json: "+string(body))
 	}
 
 	return decoded.Last, nil
