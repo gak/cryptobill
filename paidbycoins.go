@@ -34,6 +34,15 @@ type OrderBookResponse struct {
 	HighestBuy float64
 }
 
+// {"PrimaryCurrency":"BTC","SecondaryCurrency":"AUD","Price":8874.90,"ExchgID":1,"RTXVal":102.00000000
+type ExchangeRateResponse struct {
+	PrimaryCurrency   string
+	SecondaryCurrency string
+	Price             float64
+	ExchgID           int
+	RTXVal            float64
+}
+
 func NewPaidByCoins() Service {
 	return &PaidByCoins{}
 }
@@ -58,7 +67,7 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]Q
 
 	var results []QuoteResult
 	for _, currency := range currencies.Items.CurrencyDetails {
-		book, err := pbc.orderBook(cb, currency.Type)
+		exch, err := pbc.exchangeRate(cb, currency.ShortForm)
 		if err != nil {
 			return nil, err
 		}
@@ -69,11 +78,7 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]Q
 			continue
 		}
 
-		// From the website sources:
-		// t.exchangeHighestPrice.HighestBuy - t.exchangeHighestPrice.HighestBuy / 100 * t.txnCharge
-		high := Amount(book.HighestBuy)
-		rate := high - high/100.0*Amount(currency.TransactionCharge)
-		finalAmount := amount / rate
+		finalAmount := amount / Amount(exch.Price)
 		result := QuoteResult{
 			Service:    pbc,
 			Pair:       Pair{fiat, crypto},
@@ -119,6 +124,22 @@ func (pbc *PaidByCoins) orderBook(cb *CryptoBill, currency string) (*OrderBookRe
 	}
 
 	return book, nil
+}
+
+func (pbc *PaidByCoins) exchangeRate(cb *CryptoBill, currency string) (*ExchangeRateResponse, error) {
+	url := fmt.Sprintf("https://api.paidbycoins.com/tran/exchgrate/%v", currency)
+	resp, err := pbc.request(cb, "GET", url, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "request")
+	}
+
+	exch := &ExchangeRateResponse{}
+	err = json.NewDecoder(resp.Body).Decode(exch)
+	if err != nil {
+		return nil, errors.Wrap(err, "decoding json from "+url)
+	}
+
+	return exch, nil
 }
 
 func (pbc *PaidByCoins) request(cb *CryptoBill, method, url string, body io.Reader) (*http.Response, error) {
