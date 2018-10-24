@@ -24,7 +24,7 @@ func (*Bit2Bill) Website() string {
 	panic("implement me")
 }
 
-func (bb *Bit2Bill) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]QuoteResult, error) {
+func (bb *Bit2Bill) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]QuoteResult, error) {
 	url := "https://www.bit2bill.com.au/api/rate"
 	resp, err := cb.HttpClient.Get(url)
 	if err != nil {
@@ -55,3 +55,9 @@ func (bb *Bit2Bill) Quote(cb *CryptoBill, fiat Currency, amount Amount) ([]Quote
 
 	return results, nil
 }
+
+func (bb *Bit2Bill) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency, auth string) (*PayResult, error) {
+	panic("implement me")
+}
+
+

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/alecthomas/repr"
 	"github.com/gak/cryptobill"
 	"github.com/pkg/errors"
 	"io/ioutil"
@@ -15,15 +16,28 @@ import (
 )
 
 type Quote struct {
-	Fiat          cryptobill.Currency `arg`
 	Amount        cryptobill.Amount   `arg`
+	Fiat          cryptobill.Currency `arg`
 	Filter        []string            `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
 	Services      []string            `help:"Filter by service, e.g. BPC,LROS"`
 	NoConvertBack bool
 }
 
+type Pay struct {
+	Amount  cryptobill.Amount   `arg`
+	Fiat    cryptobill.Currency `arg`
+	Crypto  cryptobill.Currency `arg`
+	Service string              `arg`
+
+	BpayCode    int    `arg`
+	BpayAccount string `arg`
+
+	Auth string `arg help:"For now only for your PBC email address."`
+}
+
 type CLI struct {
 	Quote Quote `cmd`
+	Pay   Pay   `cmd`
 }
 
 type Main struct {
@@ -38,11 +52,29 @@ func main() {
 
 	ctx := kong.Parse(&m.cli)
 	switch ctx.Command() {
-	case "quote <fiat> <amount>":
+	case "quote <amount> <fiat>":
 		m.quote(&m.cli.Quote)
+	case "pay <amount> <fiat> <crypto> <service> <bpay-code> <bpay-account> <auth>":
+		m.pay(&m.cli.Pay)
 	default:
 		panic(ctx.Command())
 	}
+}
+
+func (m *Main) pay(pay *Pay) {
+	bpay := &cryptobill.BPAYInfo{
+		BillerCode:    pay.BpayCode,
+		BillerAccount: pay.BpayAccount,
+		FiatCurrency:  pay.Fiat,
+		FiatAmount:    pay.Amount,
+	}
+
+	result, err := m.cb.PayBPAY(pay.Service, pay.Crypto, bpay, pay.Auth)
+	if err != nil {
+		panic(err)
+	}
+
+	repr.Println(result)
 }
 
 func (m *Main) quote(q *Quote) {
@@ -72,24 +104,37 @@ func (m *Main) quote(q *Quote) {
 			continue
 		}
 
-		fmt.Fprintf(
+		_, err := fmt.Fprintf(
 			w, "%v\t%v\t%5.5f\t",
 			quote.Service.ShortName(),
 			quote.Pair.Crypto,
 			quote.Conversion.Crypto,
 		)
+		if err != nil {
+			panic(err)
+		}
 
 		if !q.NoConvertBack {
-			fmt.Fprintf(
+			_, err = fmt.Fprintf(
 				w, "%5.5f\t%2.3f%%\t",
 				lookup[quote.Pair.Crypto]*quote.Conversion.Crypto,
 				lookup[quote.Pair.Crypto]*quote.Conversion.Crypto/quote.Conversion.Fiat*100-100,
 			)
+			if err != nil {
+				panic(err)
+			}
 		}
 
-		fmt.Fprintf(w, "\n")
+		_, err = fmt.Fprintf(w, "\n")
+		if err != nil {
+			panic(err)
+		}
 	}
-	w.Flush()
+
+	err = w.Flush()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func sortByFiatValue(result []cryptobill.QuoteResult, lookup map[cryptobill.Currency]cryptobill.Amount) {
@@ -153,12 +198,8 @@ func (m *Main) fetchExchange(result []cryptobill.QuoteResult) (map[cryptobill.Cu
 			return nil, err
 		}
 
-		fmt.Println(last)
-
 		lookup[quote.Pair.Crypto] = cryptobill.Amount(last)
 	}
-
-	fmt.Println(lookup)
 
 	return lookup, nil
 }
