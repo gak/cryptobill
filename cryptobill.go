@@ -15,8 +15,9 @@ type Service interface {
 	Name() string
 	ShortName() string
 	Website() string
-	Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]QuoteResult, error)
-	PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency, auth string) (*PayResult, error)
+	Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error)
+	PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error)
+	PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error)
 }
 
 var Services = []Service{
@@ -41,17 +42,45 @@ type QuoteResult struct {
 	Conversion Conversion
 }
 
-type BPAYInfo struct {
-	BillerCode    int
-	BillerName    string
-	BillerAccount string
-	FiatCurrency  Currency
-	FiatAmount    Amount
-}
-
 type PayResult struct {
 	Address string
 	Amount  Amount
+}
+
+type FiatInfo struct {
+	Amount Amount   `arg help:"Fiat amount"`
+	Fiat   Currency `arg help:"Fiat type, e.g. AUD"`
+}
+
+type PayInfo struct {
+	FiatInfo
+	Crypto Currency `arg help:"Cryptocurrency to spend"`
+}
+
+type PayInfoService struct {
+	PayInfo
+	Service string `arg help:"Service, e.g. PBC"`
+
+	Auth string `required help:"For now only for your PBC email address."`
+}
+
+type BPAY struct {
+	PayInfoService
+
+	Code int `arg`
+
+	// Populated dynamically
+	Name string
+
+	Account string `arg`
+}
+
+type EFT struct {
+	PayInfoService
+	BSB           int    `arg`
+	AccountNumber int    `arg`
+	AccountName   string `arg`
+	Description   string `help:"Optionally specify a remitter."`
 }
 
 func NewCryptoBill() *CryptoBill {
@@ -65,12 +94,12 @@ func NewCryptoBill() *CryptoBill {
 	}
 }
 
-func (cb *CryptoBill) PayBPAY(serviceName string, crypto Currency, bpay *BPAYInfo, auth string) (*PayResult, error) {
+func (cb *CryptoBill) PayBPAY(bpay *BPAY) (*PayResult, error) {
 	for _, s := range Services {
-		if strings.EqualFold(s.ShortName(), serviceName) {
-			return s.PayBPAY(cb, bpay, crypto, auth)
+		if strings.EqualFold(s.ShortName(), bpay.Service) {
+			return s.PayBPAY(cb, bpay)
 		}
 	}
 
-	return nil, errors.New("unknown service: " + serviceName)
+	return nil, errors.New("unknown service: " + bpay.Service)
 }

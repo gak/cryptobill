@@ -8,6 +8,14 @@ import (
 
 type Bit2Bill struct{}
 
+func (bb *Bit2Bill) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) {
+	panic("implement me")
+}
+
+func (bb *Bit2Bill) PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error) {
+	panic("implement me")
+}
+
 func NewBit2Bill() Service {
 	return &Bit2Bill{}
 }
@@ -24,7 +32,7 @@ func (*Bit2Bill) Website() string {
 	panic("implement me")
 }
 
-func (bb *Bit2Bill) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]QuoteResult, error) {
+func (bb *Bit2Bill) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error) {
 	url := "https://www.bit2bill.com.au/api/rate"
 	resp, err := cb.HttpClient.Get(url)
 	if err != nil {
@@ -47,17 +55,11 @@ func (bb *Bit2Bill) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]Quote
 
 		result := QuoteResult{
 			Service:    bb,
-			Pair:       Pair{fiat, crypto},
-			Conversion: Conversion{amount, amount / Amount(v)},
+			Pair:       Pair{info.Fiat, crypto},
+			Conversion: Conversion{info.Amount, info.Amount / Amount(v)},
 		}
 		results = append(results, result)
 	}
 
 	return results, nil
 }
-
-func (bb *Bit2Bill) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency, auth string) (*PayResult, error) {
-	panic("implement me")
-}
-
-

@@ -29,7 +29,7 @@ func (lros *LivingRoom) Website() string {
 	return ""
 }
 
-func (lros *LivingRoom) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]QuoteResult, error) {
+func (lros *LivingRoom) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error) {
 	req, err := http.NewRequest("GET", "https://www.livingroomofsatoshi.com/api/v1/current_rates", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "request builder")
@@ -70,7 +70,7 @@ func (lros *LivingRoom) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]Q
 		qr := QuoteResult{
 			lros,
 			Pair{fiat, crypto},
-			Conversion{amount, amount / Amount(quoted)},
+			Conversion{info.Amount, info.Amount / Amount(quoted)},
 		}
 		results = append(results, qr)
 	}
@@ -78,7 +78,10 @@ func (lros *LivingRoom) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]Q
 	return results, nil
 }
 
-func (lros *LivingRoom) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency, auth string) (*PayResult, error) {
+func (lros *LivingRoom) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) {
 	panic("implement me")
 }
 
+func (lros *LivingRoom) PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error) {
+	panic("implement me")
+}

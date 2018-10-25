@@ -16,23 +16,15 @@ import (
 )
 
 type Quote struct {
-	Amount        cryptobill.Amount   `arg`
-	Fiat          cryptobill.Currency `arg`
+	cryptobill.FiatInfo `cmd`
 	Filter        []string            `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
 	Services      []string            `help:"Filter by service, e.g. BPC,LROS"`
 	NoConvertBack bool
 }
 
 type Pay struct {
-	Amount  cryptobill.Amount   `arg`
-	Fiat    cryptobill.Currency `arg`
-	Crypto  cryptobill.Currency `arg`
-	Service string              `arg`
-
-	BpayCode    int    `arg`
-	BpayAccount string `arg`
-
-	Auth string `arg help:"For now only for your PBC email address."`
+	BPAY cryptobill.BPAY `cmd`
+	EFT  cryptobill.EFT  `cmd`
 }
 
 type CLI struct {
@@ -54,22 +46,21 @@ func main() {
 	switch ctx.Command() {
 	case "quote <amount> <fiat>":
 		m.quote(&m.cli.Quote)
-	case "pay <amount> <fiat> <crypto> <service> <bpay-code> <bpay-account> <auth>":
-		m.pay(&m.cli.Pay)
+	case "pay bpay <amount> <fiat> <crypto> <service> <code> <account>":
+		m.bpay(&m.cli.Pay)
+	case "pay eft <amount> <fiat> <crypto> <service> <bsb> <account-number> <account-name>":
+		//m.eft(&m.cli.Pay)
 	default:
 		panic(ctx.Command())
 	}
 }
 
-func (m *Main) pay(pay *Pay) {
-	bpay := &cryptobill.BPAYInfo{
-		BillerCode:    pay.BpayCode,
-		BillerAccount: pay.BpayAccount,
-		FiatCurrency:  pay.Fiat,
-		FiatAmount:    pay.Amount,
-	}
+func (m *Main) eft(pay *Pay) {
 
-	result, err := m.cb.PayBPAY(pay.Service, pay.Crypto, bpay, pay.Auth)
+}
+
+func (m *Main) bpay(pay *Pay) {
+	result, err := m.cb.PayBPAY(&pay.BPAY)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +69,7 @@ func (m *Main) pay(pay *Pay) {
 }
 
 func (m *Main) quote(q *Quote) {
-	result, err := m.cb.Quote(q.Fiat, q.Amount)
+	result, err := m.cb.Quote(&q.FiatInfo)
 	if err != nil {
 		panic(err)
 	}

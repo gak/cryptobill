@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 type PaidByCoins struct {
@@ -31,7 +32,7 @@ func (*PaidByCoins) Website() string {
 	panic("implement me")
 }
 
-func (pbc *PaidByCoins) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]QuoteResult, error) {
+func (pbc *PaidByCoins) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error) {
 	currencies, err := pbc.getCurrencies(cb)
 	if err != nil {
 		return nil, errors.Wrap(err, "get currencies")
@@ -50,11 +51,11 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]Q
 			return nil, err
 		}
 
-		finalAmount := amount / Amount(exch.Price)
+		finalAmount := info.Amount / Amount(exch.Price)
 		result := QuoteResult{
 			Service:    pbc,
-			Pair:       Pair{fiat, crypto},
-			Conversion: Conversion{amount, finalAmount},
+			Pair:       Pair{info.Fiat, crypto},
+			Conversion: Conversion{info.Amount, finalAmount},
 		}
 		results = append(results, result)
 	}
@@ -62,8 +63,8 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, amount Amount, fiat Currency) ([]Q
 	return results, nil
 }
 
-func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency, email string) (*PayResult, error) {
-	exchResp, err := pbc.exchangeRate(cb, crypto)
+func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) {
+	exchResp, err := pbc.exchangeRate(cb, bpay.Crypto)
 	if err != nil {
 		return nil, errors.Wrap(err, "exchangeRate")
 	}
@@ -75,13 +76,13 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency,
 
 	var currencyDetail *CurrencyDetail
 	for _, c := range currencies.Items.CurrencyDetails {
-		if c.ShortForm == string(crypto) {
+		if strings.EqualFold(c.ShortForm, string(bpay.Crypto)) {
 			currencyDetail = &c
 			break
 		}
 	}
 	if currencyDetail == nil {
-		return nil, errors.New("unknown crypto currency: " + string(crypto))
+		return nil, errors.New("unknown crypto currency: " + string(bpay.Crypto))
 	}
 
 	err = pbc.fillBillerName(cb, bpay)
@@ -89,7 +90,7 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency,
 		return nil, errors.Wrap(err, "fill biller name")
 	}
 
-	txReq, err := newTxReq(exchResp, bpay, currencyDetail, email)
+	txReq, err := newTxReq(exchResp, bpay, currencyDetail, bpay.Auth)
 	if err != nil {
 		return nil, errors.Wrap(err, "newTxReq")
 	}
@@ -101,9 +102,13 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAYInfo, crypto Currency,
 
 	repr.Println(txAddResp)
 
-	//payResult := pbc.makePayResult(txAddResp)
+	// TODO payResult := pbc.makePayResult(txAddResp)
 
 	return nil, nil
+}
+
+func (pbc *PaidByCoins) PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error) {
+	panic("implement me")
 }
 
 type VerifyEmailResponse struct {
@@ -302,14 +307,14 @@ func (pbc *PaidByCoins) transactionAdd(cb *CryptoBill, txReq *TransactionAddRequ
 	return exch, nil
 }
 
-func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *BPAYInfo) error {
-	url := fmt.Sprintf("https://api.paidbycoins.com/common/biller/%v", info.BillerCode)
+func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *BPAY) error {
+	url := fmt.Sprintf("https://api.paidbycoins.com/common/biller/%v", info.Code)
 	resp, err := pbc.request(cb, "GET", url, nil)
 	if err != nil {
 		return errors.Wrap(err, "request")
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&info.BillerName)
+	err = json.NewDecoder(resp.Body).Decode(&info.Name)
 	if err != nil {
 		return errors.Wrap(err, "decoding json from "+url)
 	}
@@ -319,13 +324,13 @@ func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *BPAYInfo) error {
 
 // Helpers
 
-func newTxReq(exchResp *ExchangeRateResponse, bpay *BPAYInfo, currencyDetail *CurrencyDetail, email string) (*TransactionAddRequest, error) {
+func newTxReq(exchResp *ExchangeRateResponse, bpay *BPAY, currencyDetail *CurrencyDetail, email string) (*TransactionAddRequest, error) {
 	sessionId, err := uuid.NewV4()
 	if err != nil {
 		return nil, errors.Wrap(err, "uuid")
 	}
 
-	totalAmount := float64(bpay.FiatAmount) / exchResp.Price
+	totalAmount := float64(bpay.FiatInfo.Amount) / exchResp.Price
 	//totalAmount = math.Round(totalAmount*1e5) / 1e5
 
 	tranReq := &TransactionAddRequest{
@@ -334,11 +339,11 @@ func newTxReq(exchResp *ExchangeRateResponse, bpay *BPAYInfo, currencyDetail *Cu
 		HasEmail: true,
 		Email:    email,
 
-		BillerCode:      bpay.BillerCode,
-		BillerName:      bpay.BillerName,
-		RefCode:         bpay.BillerAccount,
-		EnteredCurrency: string(bpay.FiatCurrency),
-		EnteredAmount:   float64(bpay.FiatAmount),
+		BillerCode:      bpay.Code,
+		BillerName:      bpay.Name,
+		RefCode:         bpay.Account,
+		EnteredCurrency: string(bpay.FiatInfo.Fiat),
+		EnteredAmount:   float64(bpay.FiatInfo.Amount),
 
 		CurrencyExchRate: exchResp.Price,
 		RTXVal:           exchResp.RTXVal,

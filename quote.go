@@ -2,11 +2,11 @@ package cryptobill
 
 import "github.com/hashicorp/go-multierror"
 
-func (cb *CryptoBill) Quote(fiat Currency, amount Amount) ([]QuoteResult, error) {
+func (cb *CryptoBill) Quote(info *FiatInfo) ([]QuoteResult, error) {
 	var results []QuoteResult
 	var errors error
 	for _, s := range Services {
-		result, err := s.Quote(cb, amount, fiat)
+		result, err := s.Quote(cb, info)
 		if err != nil {
 			errors = multierror.Append(errors, err)
 			continue
