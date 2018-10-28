@@ -83,7 +83,7 @@ func (cb *CryptoBill) ListBills() error {
 
 	for _, bill := range bills {
 		_, err = fmt.Fprintf(
-			w, "%v\t%v\t%v\t",
+			w, "%v\t%v\t%v\t\n",
 			bill.Name,
 			repr.String(bill.EFT),
 			repr.String(bill.BPAY),
