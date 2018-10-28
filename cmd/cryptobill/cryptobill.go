@@ -23,14 +23,30 @@ type Quote struct {
 	NoConvertBack       bool
 }
 
+type Add struct {
+	BPAY struct {
+		Name string `arg`
+		cryptobill.BPAY
+	} `cmd help:"Add BPAY a bill to be used with \"pay\". e.g. \"add bpay mybill 12345 998877\""`
+
+	EFT struct {
+		Name string `arg`
+		cryptobill.EFT
+	} `cmd`
+}
+
+type List struct{}
+
 type Pay struct {
-	BPAY cryptobill.BPAY `cmd`
-	EFT  cryptobill.EFT  `cmd`
+	Name string `arg`
+	cryptobill.PayInfoService
 }
 
 type CLI struct {
 	Quote Quote `cmd`
-	Pay   Pay   `cmd`
+	Add   Add   `cmd`
+	List  List  `cmd help:"List your different bills."`
+	Pay   Pay   `cmd help:"Prepare a payment and retrieve an address to send crypto to."`
 }
 
 type Main struct {
@@ -39,6 +55,8 @@ type Main struct {
 }
 
 func main() {
+	var err error
+
 	m := Main{
 		cb: cryptobill.NewCryptoBill(),
 	}
@@ -46,33 +64,68 @@ func main() {
 	ctx := kong.Parse(&m.cli)
 	switch ctx.Command() {
 	case "quote <amount> <fiat>":
-		m.quote(&m.cli.Quote)
-	case "pay bpay <amount> <fiat> <crypto> <service> <code> <account>":
-		m.bpay(&m.cli.Pay)
-	case "pay eft <amount> <fiat> <crypto> <service> <bsb> <account-number> <account-name>":
-		//m.eft(&m.cli.Pay)
+		err = m.quote(&m.cli.Quote)
+	case "list":
+		err = m.cb.ListBills()
+	case "add bpay <name> <code> <account>":
+		err = m.cb.AddBill(entry(&m.cli.Add))
+	case "add eft <name> <bsb> <account-number> <account-name>":
+		err = m.cb.AddBill(entry(&m.cli.Add))
+	case "pay <name> <amount> <fiat> <crypto> <service>":
+		err = m.pay(&m.cli.Pay)
 	default:
-		panic(ctx.Command())
+		panic("unknown command: " + ctx.Command())
 	}
-}
 
-func (m *Main) eft(pay *Pay) {
-
-}
-
-func (m *Main) bpay(pay *Pay) {
-	result, err := m.cb.PayBPAY(&pay.BPAY)
 	if err != nil {
 		panic(err)
 	}
-
-	repr.Println(result)
 }
 
-func (m *Main) quote(q *Quote) {
+func entry(add *Add) *cryptobill.Bill {
+	if add.BPAY.Name != "" {
+		return &cryptobill.Bill{
+			Name: add.BPAY.Name,
+			BPAY: add.BPAY.BPAY,
+		}
+	} else if add.EFT.Name != "" {
+		return &cryptobill.Bill{
+			Name: add.EFT.Name,
+			EFT:  add.EFT.EFT,
+		}
+	} else {
+		panic("unknown bill type")
+	}
+}
+
+func (m *Main) pay(pay *Pay) error {
+	bill, err := m.cb.GetBill(pay.Name)
+	if err != nil {
+		return errors.Wrap(err, "get bill")
+	}
+
+	if bill.BPAY != (cryptobill.BPAY{}) {
+		payBPAY := cryptobill.PayBPAY{
+			PayInfoService: pay.PayInfoService,
+			BPAY:           bill.BPAY,
+		}
+		result, err := m.cb.PayBPAY(&payBPAY)
+		if err != nil {
+			return errors.Wrap(err, "pay bpay")
+		}
+
+		repr.Println(result)
+	} else {
+		return errors.New("bill error, could not find data")
+	}
+
+	return nil
+}
+
+func (m *Main) quote(q *Quote) error {
 	result, err := m.cb.Quote(&q.FiatInfo)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "quote")
 	}
 
 	lookup := map[cryptobill.Currency]cryptobill.Amount{}
@@ -83,7 +136,7 @@ func (m *Main) quote(q *Quote) {
 	} else {
 		lookup, err = m.fetchExchange(result)
 		if err != nil {
-			panic(err)
+			return errors.Wrap(err, "quote")
 		}
 
 		sortByFiatValue(result, lookup)
@@ -103,7 +156,7 @@ func (m *Main) quote(q *Quote) {
 			quote.Conversion.Crypto,
 		)
 		if err != nil {
-			panic(err)
+			return errors.Wrap(err, "fprintf")
 		}
 
 		if !q.NoConvertBack {
@@ -113,20 +166,22 @@ func (m *Main) quote(q *Quote) {
 				lookup[quote.Pair.Crypto]*quote.Conversion.Crypto/quote.Conversion.Fiat*100-100,
 			)
 			if err != nil {
-				panic(err)
+				return errors.Wrap(err, "fprintf")
 			}
 		}
 
 		_, err = fmt.Fprintf(w, "\n")
 		if err != nil {
-			panic(err)
+			return errors.Wrap(err, "fprintf")
 		}
 	}
 
 	err = w.Flush()
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "flush")
 	}
+
+	return nil
 }
 
 func sortByFiatValue(result []cryptobill.QuoteResult, lookup map[cryptobill.Currency]cryptobill.Amount) {

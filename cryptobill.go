@@ -16,8 +16,8 @@ type Service interface {
 	ShortName() string
 	Website() string
 	Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error)
-	PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error)
-	PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error)
+	PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, error)
+	PayEFT(cb *CryptoBill, eft *PayEFT) (*PayResult, error)
 }
 
 var Services = []Service{
@@ -64,9 +64,17 @@ type PayInfoService struct {
 	Auth string `required help:"For now only for your PBC email address."`
 }
 
-type BPAY struct {
+type PayBPAY struct {
 	PayInfoService
+	BPAY
+}
 
+type PayEFT struct {
+	PayInfoService
+	EFT
+}
+
+type BPAY struct {
 	Code int `arg`
 
 	// Populated dynamically
@@ -76,11 +84,10 @@ type BPAY struct {
 }
 
 type EFT struct {
-	PayInfoService
 	BSB           int    `arg`
 	AccountNumber int    `arg`
 	AccountName   string `arg`
-	Description   string `help:"Optionally specify a remitter."`
+	Remitter      string `help:"Shown on the receiving bank statement."`
 }
 
 func NewCryptoBill() *CryptoBill {
@@ -94,7 +101,7 @@ func NewCryptoBill() *CryptoBill {
 	}
 }
 
-func (cb *CryptoBill) PayBPAY(bpay *BPAY) (*PayResult, error) {
+func (cb *CryptoBill) PayBPAY(bpay *PayBPAY) (*PayResult, error) {
 	for _, s := range Services {
 		if strings.EqualFold(s.ShortName(), bpay.Service) {
 			return s.PayBPAY(cb, bpay)
@@ -103,3 +110,4 @@ func (cb *CryptoBill) PayBPAY(bpay *BPAY) (*PayResult, error) {
 
 	return nil, errors.New("unknown service: " + bpay.Service)
 }
+

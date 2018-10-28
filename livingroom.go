@@ -78,10 +78,10 @@ func (lros *LivingRoom) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, er
 	return results, nil
 }
 
-func (lros *LivingRoom) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) {
+func (lros *LivingRoom) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, error) {
 	panic("implement me")
 }
 
-func (lros *LivingRoom) PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error) {
+func (lros *LivingRoom) PayEFT(cb *CryptoBill, eft *PayEFT) (*PayResult, error) {
 	panic("implement me")
 }

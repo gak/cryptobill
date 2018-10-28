@@ -8,11 +8,11 @@ import (
 
 type Bit2Bill struct{}
 
-func (bb *Bit2Bill) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) {
+func (bb *Bit2Bill) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, error) {
 	panic("implement me")
 }
 
-func (bb *Bit2Bill) PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error) {
+func (bb *Bit2Bill) PayEFT(cb *CryptoBill, eft *PayEFT) (*PayResult, error) {
 	panic("implement me")
 }
 

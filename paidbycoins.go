@@ -63,7 +63,7 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, er
 	return results, nil
 }
 
-func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) {
+func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, error) {
 	exchResp, err := pbc.exchangeRate(cb, bpay.Crypto)
 	if err != nil {
 		return nil, errors.Wrap(err, "exchangeRate")
@@ -107,7 +107,7 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *BPAY) (*PayResult, error) 
 	return nil, nil
 }
 
-func (pbc *PaidByCoins) PayEFT(cb *CryptoBill, eft *EFT) (*PayResult, error) {
+func (pbc *PaidByCoins) PayEFT(cb *CryptoBill, eft *PayEFT) (*PayResult, error) {
 	panic("implement me")
 }
 
@@ -307,7 +307,7 @@ func (pbc *PaidByCoins) transactionAdd(cb *CryptoBill, txReq *TransactionAddRequ
 	return exch, nil
 }
 
-func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *BPAY) error {
+func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *PayBPAY) error {
 	url := fmt.Sprintf("https://api.paidbycoins.com/common/biller/%v", info.Code)
 	resp, err := pbc.request(cb, "GET", url, nil)
 	if err != nil {
@@ -324,7 +324,7 @@ func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *BPAY) error {
 
 // Helpers
 
-func newTxReq(exchResp *ExchangeRateResponse, bpay *BPAY, currencyDetail *CurrencyDetail, email string) (*TransactionAddRequest, error) {
+func newTxReq(exchResp *ExchangeRateResponse, bpay *PayBPAY, currencyDetail *CurrencyDetail, email string) (*TransactionAddRequest, error) {
 	sessionId, err := uuid.NewV4()
 	if err != nil {
 		return nil, errors.Wrap(err, "uuid")
