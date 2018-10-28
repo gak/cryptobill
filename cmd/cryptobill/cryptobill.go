@@ -13,13 +13,14 @@ import (
 	"text/tabwriter"
 
 	"github.com/alecthomas/kong"
+	"strings"
 )
 
 type Quote struct {
 	cryptobill.FiatInfo `cmd`
-	Filter        []string            `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
-	Services      []string            `help:"Filter by service, e.g. BPC,LROS"`
-	NoConvertBack bool
+	Filter              []string `help:"Filter by cryptocurrency, e.g. BTC,ETH"`
+	Services            []string `help:"Filter by service, e.g. BPC,LROS"`
+	NoConvertBack       bool
 }
 
 type Pay struct {
@@ -153,6 +154,12 @@ func sortByCryptoAndValue(result []cryptobill.QuoteResult) {
 }
 
 func (m *Main) showQuote(quote cryptobill.QuoteResult) bool {
+	for _, nope := range notSupported {
+		if strings.EqualFold(nope, string(quote.Pair.Crypto)) {
+			return false
+		}
+	}
+
 	if len(m.cli.Quote.Filter) == 0 {
 		return true
 	}
@@ -169,6 +176,22 @@ func (m *Main) showQuote(quote cryptobill.QuoteResult) bool {
 	}
 
 	return showQuote
+}
+
+var notSupported = []string{
+	"SDB",
+	"BTX",
+	"XEM",
+	"DCR",
+	"STEEM",
+	"DCR",
+	"SBD",
+	"DOGE",
+	"ETC",
+	"OMG",
+	"DASH",
+	"LIGHTNING",
+	"PIVX",
 }
 
 func (m *Main) fetchExchange(result []cryptobill.QuoteResult) (map[cryptobill.Currency]cryptobill.Amount, error) {
