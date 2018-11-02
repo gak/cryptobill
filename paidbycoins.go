@@ -91,14 +91,14 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, erro
 		return nil, errors.Wrap(err, "newTxReq")
 	}
 
-	txReq.BillerCode = bpay.Code
-	txReq.BillerName = bpay.Name
-	txReq.RefCode = bpay.Account
-
 	err = pbc.fillBillerName(cb, bpay)
 	if err != nil {
 		return nil, errors.Wrap(err, "fill biller name")
 	}
+
+	txReq.BillerCode = bpay.Code
+	txReq.BillerName = bpay.Name
+	txReq.RefCode = bpay.Account
 
 	txAddResp, err := pbc.transactionAdd(cb, txReq)
 	if err != nil {
