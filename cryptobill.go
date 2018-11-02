@@ -76,16 +76,16 @@ type PayEFT struct {
 
 type BPAY struct {
 	Code int `arg`
-
 	// Populated dynamically
-	Name string
-
+	Name    string
 	Account string `arg`
 }
 
 type EFT struct {
-	BSB           int    `arg`
-	AccountNumber int    `arg`
+	BSB string `arg`
+	// Populated dynamically
+	BSBName       string
+	AccountNumber string `arg`
 	AccountName   string `arg`
 	Remitter      string `help:"Shown on the receiving bank statement."`
 }
@@ -111,3 +111,12 @@ func (cb *CryptoBill) PayBPAY(bpay *PayBPAY) (*PayResult, error) {
 	return nil, errors.New("unknown service: " + bpay.Service)
 }
 
+func (cb *CryptoBill) PayEFT(eft *PayEFT) (*PayResult, error) {
+	for _, s := range Services {
+		if strings.EqualFold(s.ShortName(), eft.Service) {
+			return s.PayEFT(cb, eft)
+		}
+	}
+
+	return nil, errors.New("unknown service: " + eft.Service)
+}

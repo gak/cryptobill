@@ -115,6 +115,17 @@ func (m *Main) pay(pay *Pay) error {
 		}
 
 		repr.Println(result)
+	} else if bill.EFT != (cryptobill.EFT{}) {
+		payEFT := cryptobill.PayEFT{
+			PayInfoService: pay.PayInfoService,
+			EFT:           bill.EFT,
+		}
+		result, err := m.cb.PayEFT(&payEFT)
+		if err != nil {
+			return errors.Wrap(err, "pay bpay")
+		}
+
+		repr.Println(result)
 	} else {
 		return errors.New("bill error, could not find data")
 	}

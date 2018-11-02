@@ -63,6 +63,7 @@ func (pbc *PaidByCoins) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, er
 	return results, nil
 }
 
+// TODO: Refactor PayBPAY and PayEFT to reuse same code
 func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, error) {
 	exchResp, err := pbc.exchangeRate(cb, bpay.Crypto)
 	if err != nil {
@@ -85,14 +86,18 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, erro
 		return nil, errors.New("unknown crypto currency: " + string(bpay.Crypto))
 	}
 
+	txReq, err := newTxReq(exchResp, &bpay.FiatInfo, currencyDetail, bpay.Auth)
+	if err != nil {
+		return nil, errors.Wrap(err, "newTxReq")
+	}
+
+	txReq.BillerCode = bpay.Code
+	txReq.BillerName = bpay.Name
+	txReq.RefCode = bpay.Account
+
 	err = pbc.fillBillerName(cb, bpay)
 	if err != nil {
 		return nil, errors.Wrap(err, "fill biller name")
-	}
-
-	txReq, err := newTxReq(exchResp, bpay, currencyDetail, bpay.Auth)
-	if err != nil {
-		return nil, errors.Wrap(err, "newTxReq")
 	}
 
 	txAddResp, err := pbc.transactionAdd(cb, txReq)
@@ -107,8 +112,55 @@ func (pbc *PaidByCoins) PayBPAY(cb *CryptoBill, bpay *PayBPAY) (*PayResult, erro
 	return nil, nil
 }
 
+// TODO: Refactor PayBPAY and PayEFT to reuse same code
 func (pbc *PaidByCoins) PayEFT(cb *CryptoBill, eft *PayEFT) (*PayResult, error) {
-	panic("implement me")
+	exchResp, err := pbc.exchangeRate(cb, eft.Crypto)
+	if err != nil {
+		return nil, errors.Wrap(err, "exchangeRate")
+	}
+
+	currencies, err := pbc.getCurrencies(cb)
+	if err != nil {
+		return nil, errors.Wrap(err, "getCurrencies")
+	}
+
+	var currencyDetail *CurrencyDetail
+	for _, c := range currencies.Items.CurrencyDetails {
+		if strings.EqualFold(c.ShortForm, string(eft.Crypto)) {
+			currencyDetail = &c
+			break
+		}
+	}
+	if currencyDetail == nil {
+		return nil, errors.New("unknown crypto currency: " + string(eft.Crypto))
+	}
+
+	txReq, err := newTxReq(exchResp, &eft.FiatInfo, currencyDetail, eft.Auth)
+	if err != nil {
+		return nil, errors.Wrap(err, "newTxReq")
+	}
+
+	err = pbc.fillBSBName(cb, eft)
+	if err != nil {
+		return nil, errors.Wrap(err, "fill bsb name")
+	}
+
+	txReq.BSB = eft.BSB
+	txReq.BSBName = eft.BSBName
+	txReq.AccountNo = eft.AccountNumber
+	txReq.AccountName = eft.AccountName
+	txReq.Description = eft.Remitter
+
+	txAddResp, err := pbc.transactionAdd(cb, txReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "transactionAdd")
+	}
+
+	repr.Println(txAddResp)
+
+	// TODO payResult := pbc.makePayResult(txAddResp)
+
+	return nil, nil
 }
 
 type VerifyEmailResponse struct {
@@ -258,9 +310,16 @@ func (pbc *PaidByCoins) exchangeRate(cb *CryptoBill, crypto Currency) (*Exchange
 }
 
 type TransactionAddRequest struct {
-	BillerCode               int
-	BillerName               string
-	RefCode                  string
+	BillerCode int    `json:",omitempty"`
+	BillerName string `json:",omitempty"`
+	RefCode    string `json:",omitempty"`
+
+	BSB         string `json:",omitempty"`
+	BSBName     string `json:",omitempty"`
+	AccountNo   string `json:",omitempty"`
+	AccountName string `json:",omitempty"`
+	Description string `json:",omitempty"`
+
 	EnteredAmount            float64
 	CurrencyType             string
 	EnteredCurrency          string
@@ -273,6 +332,7 @@ type TransactionAddRequest struct {
 	TransactionServiceAmount int
 	RTXVal                   float64
 	QuoteExchgID             int
+	CurrencyRatePerAUD       int
 }
 
 type TransactionAddResponse struct {
@@ -301,7 +361,7 @@ func (pbc *PaidByCoins) transactionAdd(cb *CryptoBill, txReq *TransactionAddRequ
 	}
 
 	if exch.Message != "" {
-		return nil, errors.New(exch.Message)
+		return nil, errors.New("msg: " + exch.Message)
 	}
 
 	return exch, nil
@@ -322,16 +382,30 @@ func (pbc *PaidByCoins) fillBillerName(cb *CryptoBill, info *PayBPAY) error {
 	return nil
 }
 
+func (pbc *PaidByCoins) fillBSBName(cb *CryptoBill, info *PayEFT) error {
+	url := fmt.Sprintf("https://api.paidbycoins.com/common/bsb/%v", info.BSB)
+	resp, err := pbc.request(cb, "GET", url, nil)
+	if err != nil {
+		return errors.Wrap(err, "request")
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&info.BSBName)
+	if err != nil {
+		return errors.Wrap(err, "decoding json from "+url)
+	}
+
+	return nil
+}
+
 // Helpers
 
-func newTxReq(exchResp *ExchangeRateResponse, bpay *PayBPAY, currencyDetail *CurrencyDetail, email string) (*TransactionAddRequest, error) {
+func newTxReq(exchResp *ExchangeRateResponse, fiatInfo *FiatInfo, currencyDetail *CurrencyDetail, email string) (*TransactionAddRequest, error) {
 	sessionId, err := uuid.NewV4()
 	if err != nil {
 		return nil, errors.Wrap(err, "uuid")
 	}
 
-	totalAmount := float64(bpay.FiatInfo.Amount) / exchResp.Price
-	//totalAmount = math.Round(totalAmount*1e5) / 1e5
+	totalAmount := float64(fiatInfo.Amount) / exchResp.Price
 
 	tranReq := &TransactionAddRequest{
 		SessionID: sessionId.String(),
@@ -339,11 +413,8 @@ func newTxReq(exchResp *ExchangeRateResponse, bpay *PayBPAY, currencyDetail *Cur
 		HasEmail: true,
 		Email:    email,
 
-		BillerCode:      bpay.Code,
-		BillerName:      bpay.Name,
-		RefCode:         bpay.Account,
-		EnteredCurrency: string(bpay.FiatInfo.Fiat),
-		EnteredAmount:   float64(bpay.FiatInfo.Amount),
+		EnteredCurrency: string(fiatInfo.Fiat),
+		EnteredAmount:   float64(fiatInfo.Amount),
 
 		CurrencyExchRate: exchResp.Price,
 		RTXVal:           exchResp.RTXVal,
