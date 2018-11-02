@@ -35,7 +35,7 @@ func (*PaidByCoins) Website() string {
 func (pbc *PaidByCoins) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error) {
 	currencies, err := pbc.getCurrencies(cb)
 	if err != nil {
-		return nil, errors.Wrap(err, "get currencies")
+		return nil, errors.Wrapf(err, "get currencies %v", info)
 	}
 
 	var results []QuoteResult
@@ -365,6 +365,7 @@ func (pbc *PaidByCoins) request(cb *CryptoBill, method, url string, body io.Read
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
 	req.Header.Set("sw", "sexir")
+	req.Header.Set("Origin", "https://paidbycoins.com")
 
 	return cb.HttpClient.Do(req)
 }
