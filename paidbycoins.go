@@ -324,7 +324,7 @@ type TransactionAddRequest struct {
 	CurrencyType             string
 	EnteredCurrency          string
 	CurrencyExchRate         float64
-	TotalAmount              float64
+	TotalAmount              string
 	Email                    string
 	HasEmail                 bool
 	SessionID                string
@@ -343,10 +343,15 @@ type TransactionAddResponse struct {
 
 func (pbc *PaidByCoins) transactionAdd(cb *CryptoBill, txReq *TransactionAddRequest) (*TransactionAddResponse, error) {
 	body := new(bytes.Buffer)
-	err := json.NewEncoder(body).Encode(txReq)
+	enc := json.NewEncoder(body)
+	enc.SetIndent("", "  ")
+	err := enc.Encode(txReq)
 	if err != nil {
 		return nil, errors.Wrap(err, "encoding json")
 	}
+
+	//fmt.Println(body)
+	//os.Exit(1)
 
 	url := fmt.Sprintf("https://api.paidbycoins.com/tran/add")
 	resp, err := pbc.request(cb, "POST", url, body)
@@ -419,7 +424,7 @@ func newTxReq(exchResp *ExchangeRateResponse, fiatInfo *FiatInfo, currencyDetail
 		CurrencyExchRate: exchResp.Price,
 		RTXVal:           exchResp.RTXVal,
 		QuoteExchgID:     exchResp.ExchgID,
-		TotalAmount:      totalAmount,
+		TotalAmount:      fmt.Sprintf("%.5f", totalAmount),
 		CurrencyType:     currencyDetail.Type,
 	}
 
