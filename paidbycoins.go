@@ -35,7 +35,7 @@ func (*PaidByCoins) Website() string {
 func (pbc *PaidByCoins) Quote(cb *CryptoBill, info *FiatInfo) ([]QuoteResult, error) {
 	currencies, err := pbc.getCurrencies(cb)
 	if err != nil {
-		return nil, errors.Wrapf(err, "get currencies %v", info)
+		return nil, errors.Wrapf(err, "get currencies %+v", info)
 	}
 
 	var results []QuoteResult
